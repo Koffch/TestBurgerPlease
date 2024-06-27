@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class JoyStickController : MonoBehaviour, IMoveController
 {
-    [SerializeField] private Transform _background;
     [SerializeField] private Transform _handle;
     [SerializeField] private int _maxMouseShift;
     [SerializeField] private int _maxStickShift;
@@ -31,23 +30,21 @@ public class JoyStickController : MonoBehaviour, IMoveController
 
         if (_isMoving)
         {
-            var direction = Input.mousePosition - gameObject.transform.position;
-            var magnitude = direction.magnitude;
-            var normalized = direction.normalized;
+            var div = Input.mousePosition - gameObject.transform.position;
+            var magnitude = div.magnitude;
+            if (magnitude > _maxMouseShift)
+                div *= _maxMouseShift / magnitude;
 
-            _handle.localPosition = magnitude * _shiftDelta * normalized;
-            _background.localPosition = magnitude <= _maxMouseShift
-                ? Vector3.zero
-                : (magnitude - _maxMouseShift) * _shiftDelta * normalized;
+            _handle.localPosition = div * _shiftDelta;
 
-            direction *= _speedCoefficient;
-            Move?.Invoke(new Vector3(direction.x, 0, direction.y));
+            div *= _speedCoefficient;
+            Move?.Invoke(new Vector3(div.x, 0, div.y));
         }
 
         if (Input.GetMouseButtonUp(0))
         {
             _isMoving = false;
-            _background.localPosition = _handle.localPosition = Vector3.zero;
+            _handle.localPosition = Vector3.zero;
 
             Stop?.Invoke();
         }
