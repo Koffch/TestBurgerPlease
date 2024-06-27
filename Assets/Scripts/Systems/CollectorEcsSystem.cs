@@ -14,6 +14,8 @@ namespace Systems
         private EcsPool<JumpComponent> _jumps;
         private EcsPool<LootComponent> _loots;
 
+        private SharedData _shared;
+
         public void Init(IEcsSystems systems)
         {
             var world = systems.GetWorld();
@@ -24,6 +26,8 @@ namespace Systems
             _transforms = world.GetPool<TransformComponent>();
             _jumps = world.GetPool<JumpComponent>();
             _loots = world.GetPool<LootComponent>();
+
+            _shared = systems.GetShared<SharedData>();
         }
 
         public void Run(IEcsSystems systems)
@@ -31,7 +35,7 @@ namespace Systems
             foreach (var entity in _filter)
             {
                 ref var collector = ref _collectors.Get(entity);
-                if (collector.Stack.Count >= collector.Max) continue;
+                if (collector.Stack.Count >= CollectorComponent.Max) continue;
 
                 ref var collectorTransform = ref _transforms.Get(entity);
                 foreach (var lootEntity in _lootFilter)
@@ -43,7 +47,6 @@ namespace Systems
                     var magnitude = (collectorTransform.Transform.position - lootTransform.Transform.position).magnitude;
                     if (magnitude > CollectorComponent.Radius) continue;
 
-                    collector.Stack.Add(lootEntity);
                     loot.Status = LootStatus.Looted;
 
                     ref var jump = ref _jumps.Add(lootEntity);
@@ -52,7 +55,12 @@ namespace Systems
                     var y = 2f + collector.Stack.Count * LootComponent.Height;
                     jump.FinishLocalPosition = new Vector3(0, y, -0.8f);
                     jump.Time = 0;
+
+                    collector.Stack.Push(lootEntity);
+                    if (collector.Stack.Count >= CollectorComponent.Max) break;
                 }
+
+                _shared.Counter.text = $"{collector.Stack.Count}/{CollectorComponent.Max}";
             }
         }
     }

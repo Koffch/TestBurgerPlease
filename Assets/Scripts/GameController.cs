@@ -1,22 +1,21 @@
-using System.Collections.Generic;
 using Components;
 using Leopotam.EcsLite;
 using Systems;
+using TMPro;
 using UnityEngine;
 
 public class GameController : MonoBehaviour
 {
+    [SerializeField] private CameraController _cameraController;
     [SerializeField] private JoyStickController _joyStickController;
-    [SerializeField] private AvatarController _avatarController;
+    [SerializeField] private TextMeshProUGUI _counter;
 
     private EcsWorld _world;
     private IEcsSystems _systems;
 
     private void Start()
     {
-        _avatarController.Init(_joyStickController);
-
-        var sharedData = new SharedData { GameTransform = transform };
+        var sharedData = new SharedData { GameTransform = transform, Counter = _counter };
 
         _world = new EcsWorld();
         _systems = new EcsSystems(_world, sharedData);
@@ -24,36 +23,29 @@ public class GameController : MonoBehaviour
             .Add(new ConveyorEcsSystem()).Add(new JumpEcsSystem())
             .Init();
 
-        var generators = _world.GetPool<GeneratorComponent>();
-        var conveyors = _world.GetPool<ConveyorComponent>();
         var transforms = _world.GetPool<TransformComponent>();
+        Add<GeneratorComponent>(transforms, new Vector3(-8, 0, 15), "Prefabs/tree");
+        Add<GeneratorComponent>(transforms, new Vector3(0.7f, 0, 13), "Prefabs/tree");
+        Add<GeneratorComponent>(transforms, new Vector3(5f, 0, -15), "Prefabs/tree");
+        Add<ConveyorComponent>(transforms, new Vector3(7, 0, 0), "Prefabs/conveyor");
 
-        //add tree
+        var player = Add<CollectorComponent>(transforms, new Vector3(0, 0, 0), "Prefabs/man");
+        player.GetComponent<AvatarController>().Init(_joyStickController);
+        _cameraController.Init(player.transform);
+    }
+
+    private GameObject Add<T>(EcsPool<TransformComponent> transforms, Vector3 position, string prefabPath)
+        where T : struct
+    {
         var entity = _world.NewEntity();
-        generators.Add(entity);
-        ref var generatorTransform = ref transforms.Add(entity);
-        var prefab = Resources.Load("Prefabs/tree");
-        var go = (GameObject)Instantiate(prefab, transform);
-        generatorTransform.Transform = go.transform;
-        generatorTransform.Transform.position = new Vector3(-5, 0, 15);
+        _world.GetPool<T>().Add(entity);
 
-        //add playerCollector
-        var collectors = _world.GetPool<CollectorComponent>();
-        entity = _world.NewEntity();
-        ref var collector = ref collectors.Add(entity);
-        collector.Stack = new List<int>();
-        collector.Max = 50;
-        ref var collectorTransform = ref transforms.Add(entity);
-        collectorTransform.Transform = _avatarController.transform;
+        ref var componentTransform = ref transforms.Add(entity);
+        var go = (GameObject)Instantiate(Resources.Load(prefabPath), transform);
+        componentTransform.Transform = go.transform;
+        componentTransform.Transform.position = position;
 
-        //add conveyor
-        entity = _world.NewEntity();
-        conveyors.Add(entity);
-        ref var conveyorTransform = ref transforms.Add(entity);
-        prefab = Resources.Load("Prefabs/conveyor");
-        go = (GameObject)Instantiate(prefab, transform);
-        conveyorTransform.Transform = go.transform;
-        conveyorTransform.Transform.position = new Vector3(7, 0, 0);
+        return go;
     }
 
     private void Update()
@@ -63,8 +55,6 @@ public class GameController : MonoBehaviour
 
     private void OnDestroy()
     {
-        _avatarController.Dispose();
-
         if (_systems != null)
         {
             _systems.Destroy();

@@ -10,6 +10,8 @@ public class GeneratorEcsSystem : IEcsInitSystem, IEcsRunSystem
     private EcsPool<TransformComponent> _transforms;
     private EcsPool<LootComponent> _loots;
 
+    private SharedData _shared;
+    
     public void Init(IEcsSystems systems)
     {
         var world = systems.GetWorld();
@@ -18,6 +20,8 @@ public class GeneratorEcsSystem : IEcsInitSystem, IEcsRunSystem
         _generators = world.GetPool<GeneratorComponent>();
         _transforms = world.GetPool<TransformComponent>();
         _loots = world.GetPool<LootComponent>();
+        
+        _shared = systems.GetShared<SharedData>();
     }
 
     public void Run(IEcsSystems systems)
@@ -40,7 +44,7 @@ public class GeneratorEcsSystem : IEcsInitSystem, IEcsRunSystem
             var eulerAngles = generatorTransform.Transform.rotation.eulerAngles;
             var randomRotation = Quaternion.Euler(eulerAngles.x, eulerAngles.y, Random.Range(0f, 360f));
 
-            var go = (GameObject)Object.Instantiate(prefab, randomPosition, randomRotation);
+            var go = (GameObject)Object.Instantiate(prefab, randomPosition, randomRotation, _shared.GameTransform);
             var newEntity = world.NewEntity();
             ref var newTransform = ref _transforms.Add(newEntity);
             newTransform.Transform = go.transform;

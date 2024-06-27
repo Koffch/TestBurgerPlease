@@ -52,7 +52,7 @@ namespace Systems
                         var lootTransform = _transforms.Get(lootEntity);
                         lootTransform.Transform.SetParent(_shared.GameTransform);
 
-                        ref var jump = ref _jumps.Add(lootEntity);
+                        ref var jump = ref GetOrAddComponent(lootEntity);
                         jump.Parent = conveyorTransform.Transform;
                         jump.StartPosition = lootTransform.Transform.position;
                         var y = 1.2f + conveyor.Counter * LootComponent.Height;
@@ -63,6 +63,14 @@ namespace Systems
                     collector.Stack.Clear();
                 }
             }
+        }
+
+        private ref JumpComponent GetOrAddComponent(int entity)
+        {
+            if (_jumps.Has(entity))
+                return ref _jumps.Get(entity);
+
+            return ref _jumps.Add(entity);
         }
     }
 }
